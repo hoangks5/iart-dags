@@ -33,4 +33,5 @@ jobs:
                 cd $dir/airflow/dags
                 cd iart-dags
                 ls -la
-                git pull
+                git remote -v
+                git remote set-url origin git@github.com:hoangks5/iart-dags.git
