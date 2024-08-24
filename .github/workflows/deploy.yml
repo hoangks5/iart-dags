@@ -28,10 +28,9 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
                 cd /airflow/dags
-                if [ -d "iart_airflow" ]; then
-                    # nếu tồn tại thì cd vào thư mục đó và pull code mới nhất
-                    cd iart_airflow
+                if [ -d "iart-dags" ]; then
+                    cd iart-dags
                     git pull
                 else
-                    git clone https://github.com/hoangks5/iart_airflow.git
+                    git clone https://github.com/hoangks5/iart-dags.git
             
