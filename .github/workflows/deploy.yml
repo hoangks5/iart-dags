@@ -32,4 +32,5 @@ jobs:
                 echo $dir
                 cd $dir/airflow/dags
                 cd iart-dags
+                ls -la
                 git pull
