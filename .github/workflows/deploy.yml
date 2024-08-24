@@ -31,10 +31,5 @@ jobs:
                 dir=$(pwd)
                 echo $dir
                 cd $dir/airflow/dags
-                ls
-                if [ -d "iart-dags" ]; then
-                    cd iart-dags
-                    git pull
-                else
-                    git clone https://github.com/hoangks5/iart-dags.git
-            
+                cd iart-dags
+                git pull
