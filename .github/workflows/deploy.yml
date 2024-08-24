@@ -1,0 +1,38 @@
+name: CI/CD
+
+on:
+    push:
+        branches:
+        - hoangks5
+
+jobs:
+    deploy:
+        name: Deploy DAG to Airflow
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+    
+
+        - name: SSH and deploy
+          uses: appleboy/ssh-action@v1.0.3
+          env:
+            SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+            SSH_HOST: ${{ secrets.SSH_HOST }}
+            SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+
+          with:
+            host: ${{ secrets.SSH_HOST }}
+            username: ${{ secrets.SSH_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            script: |
+                cd /airflow/dags
+                if [ -d "iart_airflow" ]; then
+                    # nếu tồn tại thì cd vào thư mục đó và pull code mới nhất
+                    cd iart_airflow
+                    git pull
+                else
+                    git clone https://github.com/hoangks5/iart_airflow.git
+                    git checkout hoangks5
+            

@@ -1,0 +1,5 @@
+dags/
+logs/
+plugins/
+__pycache__/
+*.pyc
