@@ -3,7 +3,7 @@ name: CI/CD
 on:
     push:
         branches:
-        - hoangks5
+        - main
 
 jobs:
     deploy:
@@ -34,5 +34,4 @@ jobs:
                     git pull
                 else
                     git clone https://github.com/hoangks5/iart_airflow.git
-                    git checkout hoangks5
             
