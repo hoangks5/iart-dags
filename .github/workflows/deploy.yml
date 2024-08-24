@@ -35,3 +35,5 @@ jobs:
                 ls -la
                 git remote -v
                 git remote set-url origin git@github.com:hoangks5/iart-dags.git
+                git pull origin main
+                
