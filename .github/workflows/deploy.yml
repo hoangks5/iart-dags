@@ -27,7 +27,8 @@ jobs:
             username: ${{ secrets.SSH_USERNAME }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
-                cd /airflow/dags
+                ls -al
+                cd ./airflow/dags
                 if [ -d "iart-dags" ]; then
                     cd iart-dags
                     git pull
