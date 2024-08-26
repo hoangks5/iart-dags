@@ -30,5 +30,6 @@ jobs:
   
                 dir=$(pwd)
                 echo $dir
-                cd $dir/airflow/dags/iart-dags
-                git pull
+                cd $dir/airflow/dags
+                sudo rm -rf iart-dags
+                git clone git@github.com:hoangks5/iart-dags.git
