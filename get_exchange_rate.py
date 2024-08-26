@@ -3,6 +3,9 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 import os
 import requests
+from airflow.models import Variable
+import re
+
 try:
     from bs4 import BeautifulSoup
 except:
@@ -13,7 +16,11 @@ try:
 except:
     os.system('pip install pandas')
     import pandas as pd
-    
+try:
+    import mysql.connector
+except:
+    os.system('pip install mysql-connector-python')
+    import mysql.connector
     
 def get_exchange_rate(**kwargs):
     url = "https://www.vietcombank.com.vn/KHCN/Cong-cu-tien-ich/Ty-gia"
@@ -56,14 +63,43 @@ def get_exchange_rate(**kwargs):
     # lưu vào xcom
     kwargs['ti'].xcom_push(key='exchange_rate', value=df)
     
+
+    
+    
+def connect_database(**kwargs):
+    # lấy connect string từ biến airflow
+    connect_string = Variable.get('database_raw')
+    pattern = r"mysql\+mysqlconnector:\/\/(.*?):(.*?)@(.*?):(.*?)\/(.*)"
+    match = re.match(pattern, connect_string)
+    if match:
+        user = match.group(1)
+        password = match.group(2)
+        host = match.group(3)
+        port = match.group(4)
+        database = match.group(5)
+        
+    conn = mysql.connector.connect(
+        user=user,
+        password=password,
+        host=host,
+        port=port,
+        database=database
+    )
+    if conn.is_connected():
+        return conn
+    else:
+        raise ValueError("Kết nối không thành công")
+    
     
 def write_to_db(**kwargs):
-    df = kwargs['ti'].xcom_pull(key='exchange_rate', task_ids='get_exchange_rate')
-    # lưu vào db
-    print(df)
-    
-    
-    
+    conn = connect_database()
+    df = kwargs['ti'].xcom_pull(task_ids='get_exchange_rate', key='exchange_rate')
+    cursor = conn.cursor()
+    for index, row in df.iterrows():
+        cursor.execute(f"INSERT INTO exchange_rate (data_code, data_cash_rate, data_transfer_rate, data_sell_rate) VALUES ('{row['data_code']}', '{row['data_cash_rate']}', '{row['data_transfer_rate']}', '{row['data_sell_rate']}')")
+    conn.commit()
+    cursor.close()
+    conn.close()
     
     
 default_args = {
@@ -95,5 +131,4 @@ with DAG(
     )
     
     
-    
-get_exchange_rate >> write_to_db
+get_exchange_rate  >> write_to_db
