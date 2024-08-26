@@ -33,3 +33,4 @@ jobs:
                 cd $dir/airflow/dags
                 sudo rm -rf iart-dags
                 git clone git@github.com:hoangks5/iart-dags.git
+                

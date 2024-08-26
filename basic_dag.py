@@ -6,6 +6,9 @@ from airflow.operators.python import PythonOperator
 def hello_world():
     print("Hello, World!")
 
+def print_date():
+    print(datetime.now())
+
 # Định nghĩa default_args (các tham số mặc định) cho DAG
 default_args = {
     'owner': 'airflow',
@@ -32,5 +35,16 @@ with DAG(
         python_callable=hello_world,  # Hàm sẽ được gọi
     )
 
-# Nếu có thêm task, bạn có thể định nghĩa và đặt thứ tự thực hiện
-# hello_task >> next_task
+with DAG(
+    'print_date_dag',  # Tên của DAG
+    default_args=default_args,
+    description='A simple test DAG',
+    schedule_interval=timedelta(days=1),  # Lịch chạy hàng ngày
+    catchup=False,  # Đảm bảo DAG chỉ chạy từ thời điểm hiện tại
+) as dag:
+    print_date_task = PythonOperator(
+        task_id='print_date_task',  # Tên task
+        python_callable=print_date,  # Hàm sẽ được gọi
+    )
+
+hello_task >> print_date_task
