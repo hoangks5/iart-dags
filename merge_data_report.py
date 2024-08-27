@@ -117,7 +117,10 @@ def transform_data_date_ranger_report(**kwargs):
         df['platform'] = platform
         # thêm cột xpath vào df
         df['xpath'] = file
-        df.fillna('', inplace=True)
+        
+        df.fillna('NULL', inplace=True)
+        
+        
         # tạo 1 bảng f'company_platform_date_range_report_region
         table_name = f'{company}_{platform}_date_range_report_{region}'
         if table_name not in data.keys():
@@ -134,11 +137,11 @@ def transform_data_date_ranger_report(**kwargs):
         print(table_name)
         # in ra tên cột
         columns = dfs[0].columns
+        print(columns)
         
         # tạo bảng nếu chưa tồn tại với tên cột là tên cột của df
-        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT' for col in columns])})"
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT NULL' for col in columns])})"
         cursor.execute(query)
-        
         # Chuẩn bị dữ liệu cho chèn nhiều hàng
         data = [ tuple(row[col] for col in columns) for df in dfs for index, row in df.iterrows()]
         # Câu lệnh SQL với placeholder
