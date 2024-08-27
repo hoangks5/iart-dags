@@ -3,8 +3,12 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 import os
 from airflow.models import Variable
-from datetime import datetime, timezone
 import re
+try:
+    import numpy as np
+except:
+    os.system('pip install numpy')
+    import numpy as np
 try:
     import pandas as pd
 except:
@@ -69,21 +73,17 @@ def get_data_date_range_report():
     
     for table in list_table:
         # lấy tất cả dữ liệu có theo cột thứ 4
-        cursor.execute(f"SELECT * FROM {table}")
+        cursor.execute(f"SELECT * FROM {table} WHERE {table}.sku IS NOT NULL")
         rows = cursor.fetchall()
         # lấy tên cột
         columns = [i[0] for i in cursor.description]
         df = pd.DataFrame(rows, columns=columns)
         
-        # nếu row nào có giá trị NULL thì xóa row đó , nhưng NULL ở đây là text 'NULL'
-        df_dich_danh = df[df['sku'] != 'NULL']
-        
-        # với giá trị sku ( cột 3 ) so sánh với df_sku_productname để lấy ra product_name tương ứng và thêm vào cột mới
+
+        df_dich_danh = df
         df_dich_danh['product_name'] = df_dich_danh['sku'].map(df_sku_productname.set_index('sku')['product_name'])
-        # với giá trị sku ( cột 4 ) so sánh với df_sku_upc để lấy ra upc tương ứng và thêm vào cột mới
         df_dich_danh['upc'] = df_dich_danh['sku'].map(df_sku_upc.set_index('sku')['upc'])
         
-        df_dich_danh.fillna('NULL', inplace=True)
         
         # tạo bảng đích danh
         cursor.execute(f"DROP TABLE IF EXISTS {table}_productname_upc")
@@ -91,12 +91,18 @@ def get_data_date_range_report():
         cursor.execute(f"CREATE TABLE {table}_productname_upc ( {', '.join([f'{col} TEXT NULL' for col in df_dich_danh.columns])})")
         conn.commit()
         # Chuẩn bị dữ liệu cho chèn nhiều hàng
-        data = [ tuple(row[col] for col in df_dich_danh.columns) for index, row in df_dich_danh.iterrows()]
+        processed_data = []
+        df_dich_danh = df_dich_danh.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        for index, row in df_dich_danh.iterrows():
+            processed_data.append(tuple(row[col] for col in df_dich_danh.columns))
+        
         # Câu lệnh SQL với placeholder
         sql = f"INSERT INTO {table}_productname_upc ({', '.join([f'{col}' for col in df_dich_danh.columns])}) VALUES ({', '.join(['%s' for col in df_dich_danh.columns])})"
         # Thực thi câu lệnh SQL
-        cursor.executemany(sql, data)
+        cursor.executemany(sql, processed_data)
         conn.commit()
+            
+      
     cursor.close()
     conn.close()
     

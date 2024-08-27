@@ -2,10 +2,14 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 import os
-import requests
 from airflow.models import Variable
 from datetime import datetime, timezone
 import re
+try:
+    import numpy as np
+except:
+    os.system('pip install numpy')
+    import numpy as np
 try:
     import boto3
 except:
@@ -118,7 +122,6 @@ def transform_data_date_ranger_report(**kwargs):
         # thêm cột xpath vào df
         df['xpath'] = file
         
-        df.fillna('NULL', inplace=True)
         
         
         # tạo 1 bảng f'company_platform_date_range_report_region
@@ -143,11 +146,19 @@ def transform_data_date_ranger_report(**kwargs):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT NULL' for col in columns])})"
         cursor.execute(query)
         # Chuẩn bị dữ liệu cho chèn nhiều hàng
-        data = [ tuple(row[col] for col in columns) for df in dfs for index, row in df.iterrows()]
+        processed_data = []
+        for df in dfs:
+            # Thay thế NaN bằng None để phù hợp với MySQL NULL
+            df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+            for index, row in df.iterrows():
+                processed_data.append(tuple(row[col] for col in columns))
+        
         # Câu lệnh SQL với placeholder
         sql = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in columns])}) VALUES ({', '.join(['%s' for col in columns])})"
         # Thực thi câu lệnh SQL
-        cursor.executemany(sql, data)
+        cursor.executemany(sql, processed_data)
+        
+    
     con.commit()
     cursor.close()
     con.close()
