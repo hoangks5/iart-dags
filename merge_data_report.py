@@ -104,9 +104,9 @@ def transform_data_date_ranger_report(**kwargs):
         account = file.split('/')[2]
         region = file.split('/')[3]
         
-        # ghép tất cả các cột thành 1 chuỗi sau đó hash thành 1 chuỗi duy nhất
-        df['hash'] = df.apply(lambda x: hash(''.join([str(x[col]) for col in df.columns])), axis=1)
         
+        # tạo cột hash để xác định dữ liệu mới hay cũ trong db là gộp các cột lại thành 1 chuỗi sau đó hash
+        df['hash'] = df.apply(lambda x: hash(''.join([str(x[col]) for col in df.columns])), axis=1)
         # thêm cột account vào df
         df['account'] = account
         # thêm cột region vào df
@@ -117,7 +117,7 @@ def transform_data_date_ranger_report(**kwargs):
         df['platform'] = platform
         # thêm cột xpath vào df
         df['xpath'] = file
-        
+        df.fillna('', inplace=True)
         # tạo 1 bảng f'company_platform_date_range_report_region
         table_name = f'{company}_{platform}_date_range_report_{region}'
         if table_name not in data.keys():
@@ -131,47 +131,26 @@ def transform_data_date_ranger_report(**kwargs):
     cursor = con.cursor()
     
     for table_name, dfs in data.items():
+        print(table_name)
+        # in ra tên cột
         columns = dfs[0].columns
         
         # tạo bảng nếu chưa tồn tại với tên cột là tên cột của df
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT' for col in columns])})"
         cursor.execute(query)
-    
-
         
-        
-        
-    for table_name, dfs in data.items():
-        columns = dfs[0].columns
-        
-        # lọc ra những row có hash chưa tồn tại trong db
-        query = f"SELECT hash FROM {table_name}"
-        cursor.execute(query)
-        hash_in_db = cursor.fetchall()
-        hash_in_db = [x[0] for x in hash_in_db]
-        new_data = []
-        for i, df in enumerate(dfs):
-            new_data.append(df[~df['hash'].isin(hash_in_db)])
-           
-        print(new_data)
-         
-        # thêm dữ liệu mới vào db
-        for i, df in enumerate(new_data):
-            for index, row in df.iterrows():
-                query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join([f'"{row[col]}"' for col in columns])})"
-                cursor.execute(query)
-                
-                
+        # Chuẩn bị dữ liệu cho chèn nhiều hàng
+        data = [ tuple(row[col] for col in columns) for df in dfs for index, row in df.iterrows()]
+        # Câu lệnh SQL với placeholder
+        sql = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in columns])}) VALUES ({', '.join(['%s' for col in columns])})"
+        # Thực thi câu lệnh SQL
+        cursor.executemany(sql, data)
     con.commit()
     cursor.close()
     con.close()
         
         
 
-    
-    
-    
-        
 
 
 default_args = {
