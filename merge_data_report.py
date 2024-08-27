@@ -22,7 +22,29 @@ except:
     os.system('pip install mysql-connector-python')
     import mysql.connector
     
-    
+def connect_database(**kwargs):
+    # lấy connect string từ biến airflow
+    connect_string = Variable.get('database_raw')
+    pattern = r"mysql\+mysqlconnector:\/\/(.*?):(.*?)@(.*?):(.*?)\/(.*)"
+    match = re.match(pattern, connect_string)
+    if match:
+        user = match.group(1)
+        password = match.group(2)
+        host = match.group(3)
+        port = match.group(4)
+        database = match.group(5)
+        
+    conn = mysql.connector.connect(
+        user=user,
+        password=password,
+        host=host,
+        port=port,
+        database=database
+    )
+    if conn.is_connected():
+        return conn
+    else:
+        raise ValueError("Kết nối không thành công")
 
 def client_s3():
     s3_client = boto3.client(
@@ -68,18 +90,88 @@ def read_recent_file(**kwargs):
         print(df)
         kwargs['ti'].xcom_push(key=file, value=df)
         
-def transform_data(**kwargs):
+def transform_data_date_ranger_report(**kwargs):
+    data = {}
     recent_files = kwargs['ti'].xcom_pull(task_ids='fillter_recent_files', key='recent_files')
     for file in recent_files:
         df = kwargs['ti'].xcom_pull(task_ids='read_recent_file', key=file)
         # đổi tên cột thành chữ thường và replace khoảng trắng và / bằng dấu _ 
-        df.columns = [col.lower().replace(' ', '_').replace('/', '_') for col in df.columns]
+        df.columns = [col.lower().replace(' ', '_').replace('-', '_').replace('/', '_').replace("'", '_').replace(':','') for col in df.columns]
         kwargs['ti'].xcom_push(key=file, value=df)
         
-        print(df)
+        company = file.split('/')[0]
+        platform = file.split('/')[1]
+        account = file.split('/')[2]
+        region = file.split('/')[3]
+        
+        # ghép tất cả các cột thành 1 chuỗi sau đó hash thành 1 chuỗi duy nhất
+        df['hash'] = df.apply(lambda x: hash(''.join([str(x[col]) for col in df.columns])), axis=1)
+        
+        # thêm cột account vào df
+        df['account'] = account
+        # thêm cột region vào df
+        df['region'] = region
+        # thêm cột company vào df
+        df['company'] = company
+        # thêm cột platform vào df
+        df['platform'] = platform
+        # thêm cột xpath vào df
+        df['xpath'] = file
+        
+        # tạo 1 bảng f'company_platform_date_range_report_region
+        table_name = f'{company}_{platform}_date_range_report_{region}'
+        if table_name not in data.keys():
+            data[table_name] = []
+        data[table_name].append(df)
+        
+        
+        
+        
+    con = connect_database()
+    cursor = con.cursor()
+    
+    for table_name, dfs in data.items():
+        columns = dfs[0].columns
+        
+        # tạo bảng nếu chưa tồn tại với tên cột là tên cột của df
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT' for col in columns])})"
+        cursor.execute(query)
+    
+
+        
+        
+        
+    for table_name, dfs in data.items():
+        columns = dfs[0].columns
+        
+        # lọc ra những row có hash chưa tồn tại trong db
+        query = f"SELECT hash FROM {table_name}"
+        cursor.execute(query)
+        hash_in_db = cursor.fetchall()
+        hash_in_db = [x[0] for x in hash_in_db]
+        new_data = []
+        for i, df in enumerate(dfs):
+            new_data.append(df[~df['hash'].isin(hash_in_db)])
+           
+        print(new_data)
+         
+        # thêm dữ liệu mới vào db
+        for i, df in enumerate(new_data):
+            for index, row in df.iterrows():
+                query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join([f'"{row[col]}"' for col in columns])})"
+                cursor.execute(query)
+                
+                
+    con.commit()
+    cursor.close()
+    con.close()
         
         
 
+    
+    
+    
+        
 
 
 default_args = {
@@ -116,10 +208,10 @@ with DAG(
         python_callable=read_recent_file
     )
     
-    transform_data = PythonOperator(
-        task_id='transform_data',
-        python_callable=transform_data
+    transform_data_date_ranger_report = PythonOperator(
+        task_id='transform_data_date_ranger_report',
+        python_callable=transform_data_date_ranger_report
     )
     
-    read_all_files >> fillter_recent_files >> read_recent_file >> transform_data
+    read_all_files >> fillter_recent_files >> read_recent_file >> transform_data_date_ranger_report
     
