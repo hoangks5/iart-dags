@@ -358,6 +358,26 @@ def transform_data_date_ranger_report(**kwargs):
             for index, row in df.iterrows():
                 processed_data.append(tuple(row[col] for col in columns))
         
+        
+        count_df = len(processed_data)
+        # đối chiếu hash với db, nếu đã tồn tại thì xóa khỏi dataframe
+        cursor.execute(f"SELECT hash FROM {table_name}")
+        rows = cursor.fetchall()
+        columns = [i[0] for i in cursor.description]
+        df_hash = pd.DataFrame(rows, columns=columns)
+        df_hash = df_hash.drop_duplicates(subset=['hash'])
+        df_hash = df_hash['hash'].to_list()
+        for index, row in enumerate(processed_data):
+            if hash(''.join([str(row[col]) for col in columns])) in df_hash:
+                processed_data.pop(index)
+                
+        print(f'Đã xóa {count_df - len(processed_data)} dòng trùng lặp trong {len(processed_data)} dòng')
+        
+        if processed_data == []:
+            continue
+        
+        
+        
         # Câu lệnh SQL với placeholder
         sql = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in columns])}) VALUES ({', '.join(['%s' for col in columns])})"
         # Thực thi câu lệnh SQL
