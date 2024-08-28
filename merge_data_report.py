@@ -367,8 +367,13 @@ def transform_data_date_ranger_report(**kwargs):
         df_hash = pd.DataFrame(rows, columns=columns)
         df_hash = df_hash.drop_duplicates(subset=['hash'])
         df_hash = df_hash['hash'].to_list()
-        for index, row in enumerate(processed_data):
-            if hash(''.join([str(row[col]) for col in columns])) in df_hash:
+
+        # Chuyển đổi mỗi tuple trong processed_data thành một dictionary
+        processed_data_dicts = [dict(zip(columns, row)) for row in processed_data]
+
+        for index, row in enumerate(processed_data_dicts):
+            row_hash = hash(''.join([str(row[col]) for col in columns]))
+            if row_hash in df_hash:
                 processed_data.pop(index)
                 
         print(f'Đã xóa {count_df - len(processed_data)} dòng trùng lặp trong {len(processed_data)} dòng')
