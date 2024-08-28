@@ -5,6 +5,7 @@ import os
 from airflow.models import Variable
 from datetime import datetime, timezone
 import re
+from dateutil import parser
 try:
     import numpy as np
 except:
@@ -25,6 +26,217 @@ try:
 except:
     os.system('pip install mysql-connector-python')
     import mysql.connector
+    
+    
+def convert_str_to_number(string):
+    cv_str = str(string).replace(',','.')
+    # nếu trong cv_str có nhiều hơn 1 dấu chấm thì xóa hết dấu chấm giữ lại 1 dấu đầu tiên từ phải qua trái
+    if cv_str.count('.') > 1:
+        print('cv_str ban đầu:', cv_str)
+        cv_str = cv_str.replace('.','',cv_str.count('.')-1)
+        print('cv_str sau khi xử lý:', cv_str)
+    return float(cv_str)
+
+def convert_data(df, region):
+    date_time_dict = df.to_dict(orient='list')
+    if date_time_dict == {}:
+        return df
+    if region == 'au':
+        for index, date in enumerate(date_time_dict['date/time']):
+            date_new = parser.parse(date)
+            date_time_dict['date/time'][index] = date_new
+        key_chekc_isnumric = ['settlement id','order postal','product sales','shipping credits','gift wrap credits','promotional rebates','sales tax collected','low value goods','selling fees','fba fees','other transaction fees','other','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    
+    elif region == 'ca':
+        for index, date in enumerate(date_time_dict['date/time']):
+            date_new = parser.parse(date)
+            date_time_dict['date/time'][index] = date_new
+        key_chekc_isnumric = ['settlement id','product sales','product sales tax','shipping credits','shipping credits tax','gift wrap credits','giftwrap credits tax','Regulatory fee','Tax on regulatory fee','promotional rebates','promotional rebates tax','marketplace withheld tax','selling fees','fba fees','other transaction fees','other','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    
+    elif region == 'de':
+        for index, date in enumerate(date_time_dict['Datum/Uhrzeit']):
+            date_new = parser.parse(date)
+            date_time_dict['Datum/Uhrzeit'][index] = date_new
+        key_chekc_isnumric = ['Abrechnungsnummer','Umsätze','Produktumsatzsteuer','Gutschrift für Versandkosten','Steuer auf Versandgutschrift','Gutschrift für Geschenkverpackung','Steuer auf Geschenkverpackungsgutschriften','Rabatte aus Werbeaktionen','Steuer auf Aktionsrabatte','Einbehaltene Steuer auf Marketplace','Verkaufsgebühren','Gebühren zu Versand durch Amazon','Andere Transaktionsgebühren','Andere','Gesamt']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+                
+    elif region == 'es':
+        for index, date in enumerate(date_time_dict['fecha y hora']):
+            moth_translate = {
+                'ene': 'Jan',
+                'feb': 'Feb',
+                'mar': 'Mar',
+                'abr': 'Apr',
+                'may': 'May',
+                'jun': 'Jun',
+                'jul': 'Jul',
+                'ago': 'Aug',
+                'sep': 'Sep',
+                'oct': 'Oct',
+                'nov': 'Nov',
+                'dic': 'Dec'
+            }
+            for key in moth_translate:
+                date = date.replace(key, moth_translate[key])
+            date_new = parser.parse(date)
+            date_time_dict['fecha y hora'][index] = date_new
+        key_chekc_isnumric = ['identificador de pago','ventas de productos','impuesto de ventas de productos','abonos de envío','impuestos por abonos de envío','abonos de envoltorio para regalo','giftwrap credits tax','devoluciones promocionales','promotional rebates tax','impuesto retenido en el sitio web','tarifas de venta','tarifas de Logística de Amazon','tarifas de otras transacciones','otro','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    elif region == 'fr':
+        for index, date in enumerate(date_time_dict['date/heure']):
+            moth_translate = {
+                'janv': 'Jan',
+                'févr': 'Feb',
+                'mars': 'Mar',
+                'avr': 'Apr',
+                'mai': 'May',
+                'juin': 'Jun',
+                'juil': 'Jul',
+                'août': 'Aug',
+                'sept': 'Sep',
+                'oct': 'Oct',
+                'nov': 'Nov',
+                'déc': 'Dec'
+            }
+            for key in moth_translate:
+                date = date.replace(key, moth_translate[key])
+            date_new = parser.parse(date)
+        key_chekc_isnumric = ['numéro de versement','ventes de produits','Taxes sur la vente des produits',"crédits d'expédition","taxe sur les crédits d’expédition","crédits sur l'emballage cadeau","Taxes sur les crédits cadeaux","Rabais promotionnels","Taxes sur les remises promotionnelles","Taxes retenues sur le site de vente","frais de vente","Frais Expédié par Amazon","autres frais de transaction","autre","total"]
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    elif region == 'it':
+        for index, date in enumerate(date_time_dict['Data/Ora:']):
+            moth_translate = {
+                'gen': 'Jan',
+                'feb': 'Feb',
+                'mar': 'Mar',
+                'apr': 'Apr',
+                'mag': 'May',
+                'giu': 'Jun',
+                'lug': 'Jul',
+                'ago': 'Aug',
+                'set': 'Sep',
+                'ott': 'Oct',
+                'nov': 'Nov',
+                'dic': 'Dec'
+            }
+            for key in moth_translate:
+                date = date.replace(key, moth_translate[key])
+            date_new = parser.parse(date)
+            date_time_dict['Data/Ora:'][index] = date_new
+        key_chekc_isnumric = ["Numero pagamento","Vendite","imposta sulle vendite dei prodotti","Accrediti per le spedizioni","imposta accrediti per le spedizioni","Accrediti per confezioni regalo","imposta sui crediti confezione regalo","Sconti promozionali","imposta sugli sconti promozionali","trattenuta IVA del marketplace","Commissioni di vendita","Costi del servizio Logistica di Amazon","Altri costi relativi alle transazioni","Altro","totale"]
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    elif region == 'jp':
+        for index, date in enumerate(date_time_dict['日付/時間']):
+            date_new = parser.parse(date)
+        key_chekc_isnumric = ['決済番号','商品売上','商品の売上税','配送料','配送料の税金','ギフト包装手数料','ギフト包装クレジットの税金','Amazonポイントの費用','プロモーション割引額','プロモーション割引の税金','源泉徴収税を伴うマーケットプレイス','手数料','FBA 手数料','トランザクションに関するその他の手数料','その他','合計']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+        
+    elif region == 'mx':
+        for index, date in enumerate(date_time_dict['fecha/hora']):
+            moth_translate = {
+                'ene': 'Jan',
+                'feb': 'Feb',
+                'mar': 'Mar',
+                'abr': 'Apr',
+                'may': 'May',
+                'jun': 'Jun',
+                'jul': 'Jul',
+                'ago': 'Aug',
+                'sep': 'Sep',
+                'oct': 'Oct',
+                'nov': 'Nov',
+                'dic': 'Dec'
+            }
+            for key in moth_translate:
+                date = date.replace(key, moth_translate[key])
+            date_new = parser.parse(date)
+            date_time_dict['fecha/hora'][index] = date_new
+        key_chekc_isnumric = ["Id. de liquidación",'ventas de productos','impuesto de ventas de productos','créditos de envío','impuesto de abono de envío','créditos por envoltorio de regalo','impuesto de créditos de envoltura','Tarifa reglamentaria','Impuesto sobre tarifa reglamentaria','descuentos promocionales','impuesto de reembolsos promocionales','impuesto de retenciones en la plataforma','tarifas de venta','tarifas fba','tarifas de otra transacción','otro','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    
+    elif region == 'nl':
+        for index, date in enumerate(date_time_dict['datum/tijd']):
+            date_new = parser.parse(date)   
+            date_time_dict['datum/tijd'][index] = date_new
+        key_chekc_isnumric = ['schikkings-ID','verkoop van producten','Verzendtegoeden','kredietpunten cadeauverpakking','promotiekortingen','geïnde omzetbelasting','Belasting voor marketplace-facilitator','verkoopkosten','fba-vergoedingen','overige transactiekosten','overige','totaal']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+    
+    
+    elif region == 'uk':
+        for index, date in enumerate(date_time_dict['date/time']):
+            date_new = parser.parse(date)
+        key_chekc_isnumric = ['settlement id','product sales tax','postage credits','shipping credits tax','gift wrap credits','giftwrap credits tax','promotional rebates','promotional rebates tax','marketplace withheld tax','selling fees','fba fees','other transaction fees','other','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
+                
+    elif region == 'us':
+        for index, date in enumerate(date_time_dict['date/time']):
+            date_new = parser.parse(date)
+            date_time_dict['date/time'][index] = date_new
+        key_chekc_isnumric = ['settlement id','product sales','product sales tax','shipping credits','shipping credits tax','gift wrap credits','giftwrap credits tax','Regulatory Fee','Tax On Regulatory Fee','promotional rebates','promotional rebates tax','marketplace withheld tax','selling fees','fba fees','other transaction fees','other','total']
+        for key in key_chekc_isnumric:
+            for index, value in enumerate(date_time_dict[key]):
+                convert_number = convert_str_to_number(value)
+                date_time_dict[key][index] = convert_number
+        df_new = pd.DataFrame(date_time_dict)
+        return df_new
     
 def connect_database(**kwargs):
     # lấy connect string từ biến airflow
@@ -91,7 +303,11 @@ def read_recent_file(**kwargs):
     for file in recent_files:
         response = s3_client.get_object(Bucket='iart-data', Key=file)
         df = pd.read_csv(response['Body'])
-        print(df)
+        # covert dữ liệu
+        df = convert_data(df, file.split('/')[3])
+        if df is None:
+            print(f'Lỗi không có dữ liệu {file}')
+            continue
         kwargs['ti'].xcom_push(key=file, value=df)
         
 def transform_data_date_ranger_report(**kwargs):
@@ -99,6 +315,9 @@ def transform_data_date_ranger_report(**kwargs):
     recent_files = kwargs['ti'].xcom_pull(task_ids='fillter_recent_files', key='recent_files')
     for file in recent_files:
         df = kwargs['ti'].xcom_pull(task_ids='read_recent_file', key=file)
+        if df is None:
+            print(f'Lỗi không có dữ liệu {file}')
+            continue
         # đổi tên cột thành chữ thường và replace khoảng trắng và / bằng dấu _ 
         df.columns = [col.lower().replace(' ', '_').replace('-', '_').replace('/', '_').replace("'", '_').replace(':','') for col in df.columns]
         kwargs['ti'].xcom_push(key=file, value=df)
@@ -111,18 +330,11 @@ def transform_data_date_ranger_report(**kwargs):
         
         # tạo cột hash để xác định dữ liệu mới hay cũ trong db là gộp các cột lại thành 1 chuỗi sau đó hash
         df['hash'] = df.apply(lambda x: hash(''.join([str(x[col]) for col in df.columns])), axis=1)
-        # thêm cột account vào df
         df['account'] = account
-        # thêm cột region vào df
         df['region'] = region
-        # thêm cột company vào df
         df['company'] = company
-        # thêm cột platform vào df
         df['platform'] = platform
-        # thêm cột xpath vào df
         df['xpath'] = file
-        
-        
         
         # tạo 1 bảng f'company_platform_date_range_report_region
         table_name = f'{company}_{platform}_date_range_report_{region}'
@@ -130,18 +342,11 @@ def transform_data_date_ranger_report(**kwargs):
             data[table_name] = []
         data[table_name].append(df)
         
-        
-        
-        
+
     con = connect_database()
     cursor = con.cursor()
-    
     for table_name, dfs in data.items():
-        print(table_name)
-        # in ra tên cột
         columns = dfs[0].columns
-        print(columns)
-        
         # tạo bảng nếu chưa tồn tại với tên cột là tên cột của df
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT NULL' for col in columns])})"
         cursor.execute(query)
@@ -163,9 +368,6 @@ def transform_data_date_ranger_report(**kwargs):
     cursor.close()
     con.close()
         
-        
-
-
 
 default_args = {
     'owner': 'hoangks5',
@@ -178,7 +380,7 @@ default_args = {
 }
 
 with DAG(
-    'scan_recent_file',
+    'data_lake_to_database_raw',
     default_args=default_args,
     description='Scan recent file in s3',
     schedule_interval='@daily',

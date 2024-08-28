@@ -61,18 +61,13 @@ def get_data_date_range_report():
     columns = [i[0] for i in cursor.description]
     df_sku_upc = pd.DataFrame(rows, columns=columns)
     df_sku_upc = df_sku_upc.drop_duplicates(subset=['sku'])
-    
-    
-    
-    
-    
-    
+
     
     region = ['au', 'ca', 'de', 'es', 'fr', 'it', 'nl', 'uk', 'us']
     list_table = ['awe_amazon_date_range_report_' + i for i in region]
     
+    # lấy tất cả dữ liệu đích danh
     for table in list_table:
-        # lấy tất cả dữ liệu có theo cột thứ 4
         cursor.execute(f"SELECT * FROM {table} WHERE {table}.sku IS NOT NULL")
         rows = cursor.fetchall()
         # lấy tên cột
@@ -102,7 +97,25 @@ def get_data_date_range_report():
         cursor.executemany(sql, processed_data)
         conn.commit()
             
-      
+    # lấy dữ liệu không đích danh
+    for table in list_table:
+        cursor.execute(f"SELECT * FROM {table} WHERE {table}.sku IS NULL")
+        rows = cursor.fetchall()
+        columns = [i[0] for i in cursor.description]
+        df = pd.DataFrame(rows, columns=columns)
+        
+        cursor.execute(f"DROP TABLE IF EXISTS {table}_total")
+        conn.commit()
+        cursor.execute(f"CREATE TABLE {table}_total ( {', '.join([f'{col} TEXT NULL' for col in df.columns])})")
+        conn.commit()
+        processed_data = []
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        for index, row in df.iterrows():
+            processed_data.append(tuple(row[col] for col in df.columns))
+        
+        sql = f"INSERT INTO {table}_total ({', '.join([f'{col}' for col in df.columns])}) VALUES ({', '.join(['%s' for col in df.columns])})"
+        cursor.executemany(sql, processed_data)
+        conn.commit()
     cursor.close()
     conn.close()
     
