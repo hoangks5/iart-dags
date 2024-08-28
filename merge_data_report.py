@@ -6,6 +6,7 @@ from airflow.models import Variable
 from datetime import datetime, timezone
 import re
 from dateutil import parser
+import hashlib
 try:
     import numpy as np
 except:
@@ -310,6 +311,11 @@ def read_recent_file(**kwargs):
             continue
         kwargs['ti'].xcom_push(key=file, value=df)
         
+def md5_hash(row):
+    concatentated = ''.join([str(row[col]) for col in row.index])
+    return hashlib.md5(concatentated.encode()).hexdigest()
+        
+        
 def transform_data_date_ranger_report(**kwargs):
     data = {}
     recent_files = kwargs['ti'].xcom_pull(task_ids='fillter_recent_files', key='recent_files')
@@ -329,7 +335,7 @@ def transform_data_date_ranger_report(**kwargs):
         
         
         # tạo cột hash để xác định dữ liệu mới hay cũ trong db là gộp các cột lại thành 1 chuỗi sau đó hash
-        df['hash'] = df.apply(lambda x: hash(''.join([str(x[col]) for col in df.columns])), axis=1)
+        df['hash'] = df.apply(md5_hash, axis=1)
         df['account'] = account
         df['region'] = region
         df['company'] = company
@@ -350,7 +356,23 @@ def transform_data_date_ranger_report(**kwargs):
         # tạo bảng nếu chưa tồn tại với tên cột là tên cột của df
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join([f'{col} TEXT NULL' for col in columns])})"
         cursor.execute(query)
-        # Chuẩn bị dữ liệu cho chèn nhiều hàng
+
+        # đối chiếu hash với db, nếu đã tồn tại thì xóa khỏi dataframe
+        cursor.execute(f"SELECT hash FROM {table_name}")
+        rows = cursor.fetchall()
+        list_hash = [row[0] for row in rows]
+        
+        
+        row_before = len(dfs[0])
+        
+        for index, df in enumerate(dfs):
+            df = df[~df['hash'].isin(list_hash)]
+            dfs[index] = df
+            
+        
+        row_after = len(dfs[0])
+        print(f'Xóa {row_before - row_after} dòng trùng lặp trong {row_before} dòng')
+            
         processed_data = []
         for df in dfs:
             # Thay thế NaN bằng None để phù hợp với MySQL NULL
@@ -358,33 +380,8 @@ def transform_data_date_ranger_report(**kwargs):
             for index, row in df.iterrows():
                 processed_data.append(tuple(row[col] for col in columns))
         
-        
-        count_df = len(processed_data)
-        # đối chiếu hash với db, nếu đã tồn tại thì xóa khỏi dataframe
-        cursor.execute(f"SELECT hash FROM {table_name}")
-        rows = cursor.fetchall()
-        columns = [i[0] for i in cursor.description]
-        df_hash = pd.DataFrame(rows, columns=columns)
-        df_hash = df_hash.drop_duplicates(subset=['hash'])
-        df_hash = df_hash['hash'].to_list()
-
-        # Chuyển đổi mỗi tuple trong processed_data thành một dictionary
-        processed_data_dicts = [dict(zip(columns, row)) for row in processed_data]
-
-        for index, row in enumerate(processed_data_dicts):
-            row_hash = hash(''.join([str(row[col]) for col in columns]))
-            if row_hash in df_hash:
-                processed_data.pop(index)
-                
-        print(f'Đã xóa {count_df - len(processed_data)} dòng trùng lặp trong {len(processed_data)} dòng')
-        
-        if processed_data == []:
-            continue
-        
-        
-        
         # Câu lệnh SQL với placeholder
-        sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(['%s' for i in range(len(columns))])})"
+        sql = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in columns])}) VALUES ({', '.join(['%s' for col in columns])})"
         # Thực thi câu lệnh SQL
         cursor.executemany(sql, processed_data)
         
