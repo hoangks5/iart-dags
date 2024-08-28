@@ -63,7 +63,7 @@ def get_data_date_range_report():
     df_sku_upc = df_sku_upc.drop_duplicates(subset=['sku'])
 
     
-    region = ['au', 'ca', 'de', 'es', 'fr', 'it', 'nl', 'uk', 'us']
+    region = ['au', 'ca', 'de', 'es', 'fr', 'it', 'nl', 'uk', 'us', 'jp']
     list_table = ['awe_amazon_date_range_report_' + i for i in region]
     
     # lấy tất cả dữ liệu đích danh
