@@ -384,7 +384,7 @@ def transform_data_date_ranger_report(**kwargs):
         
         
         # Câu lệnh SQL với placeholder
-        sql = f"INSERT INTO {table_name} ({', '.join([f'{col}' for col in columns])}) VALUES ({', '.join(['%s' for col in columns])})"
+        sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(['%s' for i in range(len(columns))])})"
         # Thực thi câu lệnh SQL
         cursor.executemany(sql, processed_data)
         
