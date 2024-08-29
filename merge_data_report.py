@@ -128,6 +128,7 @@ def convert_data(df, region):
             for key in moth_translate:
                 date = date.replace(key, moth_translate[key])
             date_new = parser.parse(date)
+            date_time_dict['date/heure'][index] = date_new
         key_chekc_isnumric = ['numéro de versement','ventes de produits','Taxes sur la vente des produits',"crédits d'expédition","taxe sur les crédits d’expédition","crédits sur l'emballage cadeau","Taxes sur les crédits cadeaux","Rabais promotionnels","Taxes sur les remises promotionnelles","Taxes retenues sur le site de vente","frais de vente","Frais Expédié par Amazon","autres frais de transaction","autre","total"]
         for key in key_chekc_isnumric:
             for index, value in enumerate(date_time_dict[key]):
@@ -219,6 +220,7 @@ def convert_data(df, region):
     elif region == 'uk':
         for index, date in enumerate(date_time_dict['date/time']):
             date_new = parser.parse(date)
+            date_time_dict['date/time'][index] = date_new
         key_chekc_isnumric = ['settlement id','product sales tax','postage credits','shipping credits tax','gift wrap credits','giftwrap credits tax','promotional rebates','promotional rebates tax','marketplace withheld tax','selling fees','fba fees','other transaction fees','other','total']
         for key in key_chekc_isnumric:
             for index, value in enumerate(date_time_dict[key]):
