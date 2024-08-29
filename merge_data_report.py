@@ -362,14 +362,11 @@ def transform_data_date_ranger_report(**kwargs):
         rows = cursor.fetchall()
         list_hash = [row[0] for row in rows]
         
-        
         row_before = len(dfs[0])
-        
         for index, df in enumerate(dfs):
             df = df[~df['hash'].isin(list_hash)]
             dfs[index] = df
             
-        
         row_after = len(dfs[0])
         print(f'Xóa {row_before - row_after} dòng trùng lặp trong {row_before} dòng')
             
