@@ -327,7 +327,7 @@ def transform_data_date_ranger_report(**kwargs):
             print(f'Lỗi không có dữ liệu {file}')
             continue
         # đổi tên cột thành chữ thường và replace khoảng trắng và / bằng dấu _ 
-        df.columns = [col.lower().replace(' ', '_').replace('-', '_').replace('/', '_').replace("'", '_').replace(':','') for col in df.columns]
+        df.columns = [col.lower().replace(' ', '_').replace('-', '_').replace('/', '_').replace("'", '_').replace(':','').replace('.', '_') for col in df.columns]
         kwargs['ti'].xcom_push(key=file, value=df)
         
         company = file.split('/')[0]
