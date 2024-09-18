@@ -30,7 +30,7 @@ except:
     
     
 def convert_str_to_number(string):
-    cv_str = str(string).replace(',','.')
+    cv_str = str(string).replace(',','.').replace(' ','')
     # nếu trong cv_str có nhiều hơn 1 dấu chấm thì xóa hết dấu chấm giữ lại 1 dấu đầu tiên từ phải qua trái
     if cv_str.count('.') > 1:
         print('cv_str ban đầu:', cv_str)
